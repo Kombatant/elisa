@@ -404,11 +404,28 @@ void MediaPlayList::enqueueMultipleEntries(const DataTypes::EntryDataList &entri
         }
 
         const auto trackUrl = entryData.url.isValid() ? entryData.url : entryData.musicData[DataTypes::ResourceRole].toUrl();
+        const auto entryType = entryData.musicData.hasElementType() ? entryData.musicData.elementType() : ElisaUtils::FileName;
+
         if (!entryData.musicData.databaseId() && trackUrl.isValid()) {
             auto newEntry = MediaPlayListEntry{trackUrl};
-            newEntry.mEntryType = ElisaUtils::FileName;
+            newEntry.mEntryType = entryType;
+            if (entryType == ElisaUtils::Radio) {
+                newEntry.mIsValid = true;
+            }
             d->mData.insert(i, std::move(newEntry));
-            d->mTrackData.insert(i, {});
+
+            if (entryType == ElisaUtils::Radio) {
+                DataTypes::TrackDataType radioData;
+                for (auto it = entryData.musicData.cbegin(); it != entryData.musicData.cend(); ++it) {
+                    radioData[it.key()] = it.value();
+                }
+                if (!radioData.contains(DataTypes::ResourceRole)) {
+                    radioData[DataTypes::ResourceRole] = trackUrl;
+                }
+                d->mTrackData.insert(i, std::move(radioData));
+            } else {
+                d->mTrackData.insert(i, {});
+            }
         } else {
             d->mData.insert(i, MediaPlayListEntry{entryData.musicData.databaseId(), entryData.title, entryData.musicData.elementType()});
             const auto &data = entryData.musicData;

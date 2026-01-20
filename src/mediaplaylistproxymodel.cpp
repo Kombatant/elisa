@@ -7,18 +7,19 @@
  */
 
 #include "mediaplaylistproxymodel.h"
+#include "config-upnp-qt.h"
+#include "elisa_settings.h"
 #include "elisautils.h"
 #include "mediaplaylist.h"
 #include "playListLogging.h"
-#include "elisa_settings.h"
-#include "config-upnp-qt.h"
-#include <QItemSelection>
-#include <QList>
-#include <QRandomGenerator>
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QDir>
+#include <QItemSelection>
+#include <QList>
+#include <QMap>
 #include <QMimeDatabase>
+#include <QRandomGenerator>
 #include <QTimer>
 
 #if KFKIO_FOUND
@@ -28,6 +29,67 @@
 #include <algorithm>
 
 using namespace Qt::Literals::StringLiterals;
+
+namespace
+{
+struct PlsEntry {
+    QUrl url;
+    QString title;
+};
+
+QList<PlsEntry> parsePlsEntries(const QByteArray &fileContent)
+{
+    QMap<int, PlsEntry> entries;
+
+    const auto lines = fileContent.split('\n');
+    for (const QByteArray &rawLine : lines) {
+        const QString line = QString::fromUtf8(rawLine).trimmed();
+        if (line.isEmpty()) {
+            continue;
+        }
+
+        if (line.startsWith(QLatin1Char('[')) || line.startsWith(QLatin1Char('#')) || line.startsWith(QLatin1Char(';'))) {
+            continue;
+        }
+
+        const auto equalsIndex = line.indexOf(QLatin1Char('='));
+        if (equalsIndex <= 0) {
+            continue;
+        }
+
+        const auto key = line.left(equalsIndex).trimmed();
+        const auto value = line.mid(equalsIndex + 1).trimmed();
+
+        if (key.startsWith(QStringLiteral("File"), Qt::CaseInsensitive)) {
+            bool ok = false;
+            const int index = key.mid(4).toInt(&ok);
+            if (!ok) {
+                continue;
+            }
+            const QUrl url = value.contains(QStringLiteral("://")) ? QUrl(value) : QUrl::fromLocalFile(value);
+            entries[index].url = url;
+        } else if (key.startsWith(QStringLiteral("Title"), Qt::CaseInsensitive)) {
+            bool ok = false;
+            const int index = key.mid(5).toInt(&ok);
+            if (!ok) {
+                continue;
+            }
+            entries[index].title = value;
+        }
+    }
+
+    QList<PlsEntry> result;
+    result.reserve(entries.size());
+    for (auto it = entries.cbegin(); it != entries.cend(); ++it) {
+        if (!it.value().url.isValid()) {
+            continue;
+        }
+        result.push_back(it.value());
+    }
+
+    return result;
+}
+}
 
 QList<QUrl> M3uPlaylistParser::fromPlaylist(const QUrl &fileName, const QByteArray &fileContent) {
     Q_UNUSED(fileName);
@@ -1342,19 +1404,58 @@ void MediaPlayListProxyModel::loadLocalPlayList(DataTypes::EntryDataList &newTra
                                                 const QByteArray &fileContent)
 {
     PlaylistParser playlistParser;
-    QList<QUrl> listOfUrls = playlistParser.fromPlaylist(fileName, fileContent);
+    QList<QUrl> listOfUrls;
+    QList<PlsEntry> plsEntries;
+
+    const auto mimeType = d->mMimeDb.mimeTypeForUrl(fileName);
+    const bool isPlsPlaylist = mimeType.inherits(QStringLiteral("audio/x-scpls"));
+
+    if (isPlsPlaylist) {
+        plsEntries = parsePlsEntries(fileContent);
+        qCDebug(orgKdeElisaPlayList()) << "MediaPlayListProxyModel::loadLocalPlayList PLS entries" << plsEntries.size();
+        listOfUrls.reserve(plsEntries.size());
+        for (const auto &entry : std::as_const(plsEntries)) {
+            listOfUrls.push_back(entry.url);
+        }
+    } else {
+        listOfUrls = playlistParser.fromPlaylist(fileName, fileContent);
+    }
 
     int filtered = filterLocalPlayList(listOfUrls, fileName);
     if (filtered != 0) {
         d->mPartiallyLoaded = true;
     }
 
-    for (const QUrl &oneUrl : std::as_const(listOfUrls)) {
-        if (oneUrl.isLocalFile()) {
-            QFileInfo fileInfo(oneUrl.toLocalFile());
-            loadLocalFile(newTracks, processedFiles, fileInfo);
-        } else {
-            newTracks.push_back({{{{DataTypes::ElementTypeRole, ElisaUtils::FileName}, {DataTypes::ResourceRole, oneUrl}}}, {}, {}});
+    const QSet<QUrl> allowedUrls(listOfUrls.cbegin(), listOfUrls.cend());
+
+    if (isPlsPlaylist) {
+        for (const auto &entry : std::as_const(plsEntries)) {
+            if (!allowedUrls.contains(entry.url)) {
+                continue;
+            }
+
+            if (entry.url.isLocalFile()) {
+                QFileInfo fileInfo(entry.url.toLocalFile());
+                loadLocalFile(newTracks, processedFiles, fileInfo);
+                continue;
+            }
+
+            auto title = entry.title;
+            if (title.isEmpty()) {
+                title = entry.url.toString();
+            }
+
+            newTracks.push_back(
+                {{{DataTypes::ElementTypeRole, ElisaUtils::Radio}, {DataTypes::TitleRole, title}, {DataTypes::ResourceRole, entry.url}}, {}, {}});
+        }
+    } else {
+        for (const QUrl &oneUrl : std::as_const(listOfUrls)) {
+            if (oneUrl.isLocalFile()) {
+                QFileInfo fileInfo(oneUrl.toLocalFile());
+                loadLocalFile(newTracks, processedFiles, fileInfo);
+            } else {
+                newTracks.push_back({{{{DataTypes::ElementTypeRole, ElisaUtils::FileName}, {DataTypes::ResourceRole, oneUrl}}}, {}, {}});
+            }
         }
     }
 }

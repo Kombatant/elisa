@@ -143,6 +143,8 @@ public Q_SLOTS:
 
     void updateSingleFileMetaData(const QUrl &url, DataTypes::ColumnsRoles role, const QVariant &data);
 
+    Q_INVOKABLE void addRadioStation(const QUrl &url, const QString &title = {}, const QUrl &imageUrl = {});
+
 private Q_SLOTS:
 
     void configChanged();

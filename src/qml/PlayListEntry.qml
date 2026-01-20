@@ -128,6 +128,16 @@ BasePlayListDelegate {
                     playListEntry.removeFromPlaylist(playListEntry.index)
                 }
             }
+            property var addRadioAction: Kirigami.Action {
+                text: i18nc("@action:button", "Add to Radio Stations")
+                icon.name: "list-add"
+                visible: playListEntry.entryType === ElisaUtils.Radio
+                enabled: playListEntry.isValid
+
+                onTriggered: {
+                    ElisaApplication.musicManager.addRadioStation(playListEntry.fileName, playListEntry.title, playListEntry.imageUrl)
+                }
+            }
         }
 
         RowLayout {
@@ -277,6 +287,15 @@ BasePlayListDelegate {
                         visible: actionList.removeAction.visible
                         icon.color: playListEntry.iconColor
 
+                        KeyNavigation.right: addRadioButton
+                    }
+
+                    FlatButtonWithToolTip {
+                        id: addRadioButton
+                        action: actionList.addRadioAction
+                        visible: actionList.addRadioAction.visible
+                        icon.color: playListEntry.iconColor
+
                         KeyNavigation.right: ratingButton
                     }
 
@@ -398,6 +417,10 @@ BasePlayListDelegate {
                     }
                     MenuItem {
                         action: actionList.favoriteAction
+                        visible: action.visible
+                    }
+                    MenuItem {
+                        action: actionList.addRadioAction
                         visible: action.visible
                     }
                     MenuSeparator { }

@@ -186,6 +186,12 @@ BasePlayListDelegate {
                         icon.name: "error"
                         text: i18nc("@action:button", "Remove from queue")
                         onTriggered: playListEntry.removeFromPlaylist(playListEntry.index)
+                    },
+                    Kirigami.Action {
+                        visible: playListEntry.entryType === ElisaUtils.Radio
+                        icon.name: "list-add"
+                        text: i18nc("@action:button", "Add to Radio Stations")
+                        onTriggered: ElisaApplication.musicManager.addRadioStation(playListEntry.fileName, playListEntry.title, playListEntry.imageUrl)
                     }
                 ]
             }

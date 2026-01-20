@@ -472,6 +472,8 @@ void ManageAudioPlayer::setCurrentPlayingForRadios(const QString &title, const Q
                     }
 
                     if (mRadioArtworkResolver) {
+                        qCInfo(orgKdeElisaPlayer()) << "ManageAudioPlayer::setCurrentPlayingForRadios" << "requesting Discogs cover" << title << artistOrStation
+                                                    << mCurrentTrack.data(mUrlRole).toUrl();
                         mRadioArtworkResolver->requestArtwork(mCurrentTrack, mCurrentTrack.data(mUrlRole).toUrl(), title, artistOrStation);
                     }
                 }

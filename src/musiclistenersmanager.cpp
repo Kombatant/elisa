@@ -451,4 +451,23 @@ void MusicListenersManager::updateSingleFileMetaData(const QUrl &url, DataTypes:
     tracksListener()->updateSingleFileMetaData(url, role, data);
 }
 
+void MusicListenersManager::addRadioStation(const QUrl &url, const QString &title, const QUrl &imageUrl)
+{
+    if (!url.isValid() || url.isRelative() || url.scheme().isEmpty()) {
+        return;
+    }
+
+    auto radioData = DataTypes::TrackDataType();
+    radioData[DataTypes::ResourceRole] = url;
+    radioData[DataTypes::TitleRole] = title.isEmpty() ? url.toString() : title;
+    radioData[DataTypes::RatingRole] = 0;
+    radioData[DataTypes::ImageUrlRole] = imageUrl;
+    radioData[DataTypes::ElementTypeRole] = ElisaUtils::Radio;
+
+    DataTypes::ListTrackDataType radios;
+    radios.push_back(radioData);
+
+    QMetaObject::invokeMethod(&d->mDatabaseInterface, "insertTracksList", Qt::QueuedConnection, Q_ARG(DataTypes::ListTrackDataType, radios));
+}
+
 #include "moc_musiclistenersmanager.cpp"

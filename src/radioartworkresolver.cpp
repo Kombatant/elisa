@@ -30,13 +30,16 @@ RadioArtworkResolver::RadioArtworkResolver(QObject *parent)
 
 void RadioArtworkResolver::requestArtwork(const QPersistentModelIndex &index, const QUrl &streamUrl, const QString &title, const QString &artistOrStation)
 {
+    qCInfo(orgKdeElisaPlayer()) << "RadioArtworkResolver::requestArtwork" << streamUrl << title << artistOrStation;
     if (!index.isValid() || !isDiFmStream(streamUrl)) {
+        qCInfo(orgKdeElisaPlayer()) << "RadioArtworkResolver::requestArtwork" << "skipped (invalid index or unsupported stream)";
         return;
     }
 
     QString artist;
     QString trackTitle;
     if (!parseArtistTitle(title, artistOrStation, artist, trackTitle)) {
+        qCInfo(orgKdeElisaPlayer()) << "RadioArtworkResolver::requestArtwork" << "could not parse artist/title";
         return;
     }
 
@@ -44,6 +47,7 @@ void RadioArtworkResolver::requestArtwork(const QPersistentModelIndex &index, co
 
     if (mCache.contains(key)) {
         const auto cached = mCache.value(key);
+        qCInfo(orgKdeElisaPlayer()) << "RadioArtworkResolver::requestArtwork" << "cache hit" << key << cached;
         if (cached.isValid() && !cached.isEmpty()) {
             Q_EMIT artworkResolved(index, cached);
         }
@@ -52,6 +56,7 @@ void RadioArtworkResolver::requestArtwork(const QPersistentModelIndex &index, co
 
     mPending[key].push_back(index);
     if (mInFlight.contains(key)) {
+        qCInfo(orgKdeElisaPlayer()) << "RadioArtworkResolver::requestArtwork" << "request already in flight" << key;
         return;
     }
 
@@ -63,6 +68,7 @@ void RadioArtworkResolver::startDiscogsLookup(const QString &key, const QString 
 {
     const auto token = Elisa::ElisaConfiguration::discogsToken().trimmed();
     if (token.isEmpty()) {
+        qCWarning(orgKdeElisaPlayer()) << "RadioArtworkResolver::startDiscogsLookup" << "missing Discogs token" << key;
         finishKey(key, {});
         return;
     }
@@ -76,6 +82,8 @@ void RadioArtworkResolver::startDiscogsLookup(const QString &key, const QString 
     query.addQueryItem(u"page"_s, u"1"_s);
     url.setQuery(query.toString(QUrl::FullyEncoded));
 
+    qCInfo(orgKdeElisaPlayer()) << "RadioArtworkResolver::startDiscogsLookup" << "request" << key << url;
+
     auto request = buildRequest(url);
     request.setRawHeader("Authorization", QByteArray("Discogs token=") + token.toUtf8());
     request.setRawHeader("Accept", "application/json");
@@ -87,6 +95,7 @@ void RadioArtworkResolver::startDiscogsLookup(const QString &key, const QString 
         const auto key = mReplyKey.take(reply);
 
         if (reply->error() != QNetworkReply::NoError) {
+            qCWarning(orgKdeElisaPlayer()) << "RadioArtworkResolver::startDiscogsLookup" << "reply error" << key << reply->error() << reply->errorString();
             reply->deleteLater();
             finishKey(key, {});
             return;
@@ -97,12 +106,14 @@ void RadioArtworkResolver::startDiscogsLookup(const QString &key, const QString 
 
         const auto document = QJsonDocument::fromJson(payload);
         if (!document.isObject()) {
+            qCWarning(orgKdeElisaPlayer()) << "RadioArtworkResolver::startDiscogsLookup" << "invalid JSON" << key;
             finishKey(key, {});
             return;
         }
 
         const auto results = document.object().value(u"results"_s).toArray();
         if (results.isEmpty()) {
+            qCInfo(orgKdeElisaPlayer()) << "RadioArtworkResolver::startDiscogsLookup" << "no results" << key;
             finishKey(key, {});
             return;
         }
@@ -113,12 +124,15 @@ void RadioArtworkResolver::startDiscogsLookup(const QString &key, const QString 
             coverUrl = resultObject.value(u"thumb"_s).toString();
         }
 
+        qCInfo(orgKdeElisaPlayer()) << "RadioArtworkResolver::startDiscogsLookup" << "resolved cover" << key << coverUrl;
+
         finishKey(key, QUrl(coverUrl));
     });
 }
 
 void RadioArtworkResolver::finishKey(const QString &key, const QUrl &url)
 {
+    qCInfo(orgKdeElisaPlayer()) << "RadioArtworkResolver::finishKey" << key << url;
     mInFlight.remove(key);
     if (url.isValid() && !url.isEmpty()) {
         mCache.insert(key, url);
