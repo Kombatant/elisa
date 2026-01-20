@@ -44,6 +44,13 @@
     </default>
   </entry>
   </group>
+ <group name="Radio">
+  <entry key="DiscogsToken" type="String">
+    <default>
+      ""
+    </default>
+  </entry>
+ </group>
   <group name="Playlist">
    <entry key="AlwaysUseAbsolutePlaylistPaths" type="Bool" >
    <default>

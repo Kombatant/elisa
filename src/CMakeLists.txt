@@ -16,6 +16,7 @@ set(elisaLib_SOURCES
     managemediaplayercontrol.cpp
     manageheaderbar.cpp
     manageaudioplayer.cpp
+    radioartworkresolver.cpp
     trackslistener.cpp
     elisaapplication.cpp
     modeldataloader.cpp
@@ -233,7 +234,7 @@ set(elisaLib_SOURCES
 add_library(elisaLib ${elisaLib_SOURCES})
 target_link_libraries(elisaLib
     LINK_PUBLIC
-    Qt::Multimedia Qt::Qml KF6::ConfigGui
+    Qt::Multimedia Qt::Qml Qt::Network KF6::ConfigGui
     LINK_PRIVATE
     Qt::Core Qt::Quick Qt::Sql Qt::Widgets Qt::Concurrent
     KF6::I18n KF6::CoreAddons

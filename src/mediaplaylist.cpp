@@ -259,6 +259,13 @@ bool MediaPlayList::setData(const QModelIndex &index, const QVariant &value, int
 
         break;
     }
+    case ColumnsRoles::ImageUrlRole: {
+        modelModified = true;
+        d->mTrackData[index.row()][static_cast<TrackDataType::key_type>(role)] = value;
+        Q_EMIT dataChanged(index, index, {role, static_cast<int>(ColumnsRoles::AlbumSectionRole)});
+
+        break;
+    }
     default:
         modelModified = false;
     }

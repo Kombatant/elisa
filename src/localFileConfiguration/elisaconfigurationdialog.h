@@ -83,6 +83,8 @@ class ELISALIB_EXPORT ElisaConfigurationDialog : public QObject
                WRITE setUseFavoriteStyleRatings
                NOTIFY useFavoriteStyleRatingsChanged)
 
+    Q_PROPERTY(QString discogsToken READ discogsToken WRITE setDiscogsToken NOTIFY discogsTokenChanged)
+
 public:
 
     static ElisaConfigurationDialog *create(QQmlEngine *engine, QJSEngine *scriptEngine)
@@ -154,6 +156,11 @@ public:
         return mUseFavoriteStyleRatings;
     }
 
+    [[nodiscard]] QString discogsToken() const
+    {
+        return mDiscogsToken;
+    }
+
     Q_INVOKABLE void removeMusicLocation(const QString &location);
 
 
@@ -183,6 +190,8 @@ Q_SIGNALS:
 
     void useFavoriteStyleRatingsChanged();
 
+    void discogsTokenChanged();
+
 public Q_SLOTS:
 
     void setRootPath(const QStringList &rootPath);
@@ -211,6 +220,8 @@ public Q_SLOTS:
 
     void setUseFavoriteStyleRatings(bool useFavoriteStyleRatings);
 
+    void setDiscogsToken(const QString &discogsToken);
+
 private Q_SLOTS:
 
     void configChanged();
@@ -238,6 +249,8 @@ private:
     bool mScanAtStartup = true;
 
     bool mUseFavoriteStyleRatings = false;
+
+    QString mDiscogsToken;
 
     ElisaUtils::PlayListEntryType mEmbeddedView = ElisaUtils::Unknown;
 

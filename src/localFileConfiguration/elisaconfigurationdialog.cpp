@@ -79,6 +79,7 @@ void ElisaConfigurationDialog::save()
     Elisa::ElisaConfiguration::setPlayAtStartup(mPlayAtStartup);
     Elisa::ElisaConfiguration::setScanAtStartup(mScanAtStartup);
     Elisa::ElisaConfiguration::setUseFavoriteStyleRatings(mUseFavoriteStyleRatings);
+    Elisa::ElisaConfiguration::setDiscogsToken(mDiscogsToken);
 
     Elisa::ElisaConfiguration::setEmbeddedView(Elisa::ElisaConfiguration::EnumEmbeddedView::NoView);
     switch (mEmbeddedView)
@@ -241,6 +242,18 @@ void ElisaConfigurationDialog::setUseFavoriteStyleRatings(bool useFavoriteStyleR
     setDirty();
 }
 
+void ElisaConfigurationDialog::setDiscogsToken(const QString &discogsToken)
+{
+    if (mDiscogsToken == discogsToken) {
+        return;
+    }
+
+    mDiscogsToken = discogsToken;
+    Q_EMIT discogsTokenChanged();
+
+    setDirty();
+}
+
 void ElisaConfigurationDialog::removeMusicLocation(const QString &location)
 {
     mRootPath.removeAll(location);
@@ -269,6 +282,9 @@ void ElisaConfigurationDialog::configChanged()
 
     mUseFavoriteStyleRatings = Elisa::ElisaConfiguration::useFavoriteStyleRatings();
     Q_EMIT useFavoriteStyleRatingsChanged();
+
+    mDiscogsToken = Elisa::ElisaConfiguration::discogsToken();
+    Q_EMIT discogsTokenChanged();
 
     mAlwaysUseAbsolutePlaylistPaths = Elisa::ElisaConfiguration::alwaysUseAbsolutePlaylistPaths();
     Q_EMIT alwaysUseAbsolutePlaylistPathsChanged();

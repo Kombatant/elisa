@@ -175,6 +175,22 @@ ColumnLayout {
 
         Item {
             Kirigami.FormData.isSection: true
+        }
+
+        QQC2.TextField {
+            Kirigami.FormData.label: i18nc("@label:textbox", "Discogs API token:")
+
+            Layout.fillWidth: true
+
+            text: ElisaConfigurationDialog.discogsToken.length ? ElisaConfigurationDialog.discogsToken : ""
+            placeholderText: i18nc("@info:placeholder", "Enter your Discogs user token")
+            echoMode: QQC2.TextInput.Password
+
+            onTextChanged: ElisaConfigurationDialog.discogsToken = text
+        }
+
+        Item {
+            Kirigami.FormData.isSection: true
             visible: Kirigami.Settings.isMobile
         }
 

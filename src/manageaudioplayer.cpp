@@ -6,9 +6,9 @@
 
 #include "manageaudioplayer.h"
 
-#include "mediaplaylist.h"
-
 #include "elisa_settings.h"
+#include "mediaplaylist.h"
+#include "radioartworkresolver.h"
 
 #include "playerLogging.h"
 
@@ -17,7 +17,34 @@
 
 ManageAudioPlayer::ManageAudioPlayer(QObject *parent) : QObject(parent)
 {
+    mRadioArtworkResolver = new RadioArtworkResolver(this);
+    connect(mRadioArtworkResolver, &RadioArtworkResolver::artworkResolved, this, [this](const QPersistentModelIndex &index, const QUrl &url) {
+        if (!index.isValid() || url.isEmpty()) {
+            return;
+        }
 
+        if (index == mCurrentTrack) {
+            Q_EMIT updateData(index, url, MediaPlayList::ImageUrlRole);
+        }
+    });
+
+    connect(Elisa::ElisaConfiguration::self(), &Elisa::ElisaConfiguration::configChanged, this, [this]() {
+        if (!mCurrentTrack.isValid()) {
+            return;
+        }
+
+        const auto type = mCurrentTrack.data(MediaPlayList::ElementTypeRole).value<ElisaUtils::PlayListEntryType>();
+        if (type != ElisaUtils::Radio) {
+            return;
+        }
+
+        const auto title = mCurrentTrack.data(mTitleRole).toString();
+        const auto artist = mCurrentTrack.data(mArtistNameRole).toString();
+
+        if (mRadioArtworkResolver) {
+            mRadioArtworkResolver->requestArtwork(mCurrentTrack, mCurrentTrack.data(mUrlRole).toUrl(), title, artist);
+        }
+    });
 }
 
 QPersistentModelIndex ManageAudioPlayer::currentTrack() const
@@ -135,6 +162,18 @@ void ManageAudioPlayer::setCurrentTrack(const QPersistentModelIndex &currentTrac
     mOldCurrentTrack = mCurrentTrack;
 
     mCurrentTrack = currentTrack;
+
+    mLastRadioNowPlaying.clear();
+    mRadioFallbackIndex = QPersistentModelIndex();
+    mRadioFallbackImage = {};
+
+    if (mCurrentTrack.isValid()) {
+        const auto type = mCurrentTrack.data(MediaPlayList::ElementTypeRole).value<ElisaUtils::PlayListEntryType>();
+        if (type == ElisaUtils::Radio) {
+            mRadioFallbackIndex = mCurrentTrack;
+            mRadioFallbackImage = mCurrentTrack.data(MediaPlayList::ImageUrlRole).toUrl();
+        }
+    }
 
     if (mCurrentTrack.isValid()) {
         restorePreviousState();
@@ -422,6 +461,21 @@ void ManageAudioPlayer::setCurrentPlayingForRadios(const QString &title, const Q
         if (!suppressMetadataUpdate) {
             Q_EMIT updateData(mCurrentTrack, title, MediaPlayList::TitleRole);
             Q_EMIT updateData(mCurrentTrack, artistOrStation, MediaPlayList::ArtistRole);
+
+            if (type == ElisaUtils::Radio) {
+                const auto nowPlayingKey = title + QStringLiteral("\n") + artistOrStation;
+                if (mLastRadioNowPlaying != nowPlayingKey) {
+                    mLastRadioNowPlaying = nowPlayingKey;
+
+                    if (mRadioFallbackIndex == mCurrentTrack && mRadioFallbackImage.isValid() && !mRadioFallbackImage.isEmpty()) {
+                        Q_EMIT updateData(mCurrentTrack, mRadioFallbackImage, MediaPlayList::ImageUrlRole);
+                    }
+
+                    if (mRadioArtworkResolver) {
+                        mRadioArtworkResolver->requestArtwork(mCurrentTrack, mCurrentTrack.data(mUrlRole).toUrl(), title, artistOrStation);
+                    }
+                }
+            }
         }
     }
 }

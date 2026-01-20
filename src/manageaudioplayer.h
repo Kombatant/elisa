@@ -18,6 +18,7 @@
 #include <QMediaPlayer>
 
 class QDateTime;
+class RadioArtworkResolver;
 
 class ELISALIB_EXPORT ManageAudioPlayer : public QObject
 {
@@ -310,6 +311,11 @@ private:
 
     qint64 mUndoPlayerPosition = 0;
 
+    RadioArtworkResolver *mRadioArtworkResolver = nullptr;
+
+    QPersistentModelIndex mRadioFallbackIndex;
+    QUrl mRadioFallbackImage;
+    QString mLastRadioNowPlaying;
 };
 
 #endif // MANAGEAUDIOPLAYER_H
