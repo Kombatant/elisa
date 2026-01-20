@@ -8531,6 +8531,8 @@ void DatabaseInterface::updateTrackInDatabase(const DataTypes::TrackDataType &on
 
 void DatabaseInterface::removeRadio(qulonglong radioId)
 {
+    initChangesTrackers();
+
     d->mDeleteRadioQuery.bindValue(QStringLiteral(":radioId"), radioId);
 
     auto result = execQuery(d->mDeleteRadioQuery);
@@ -8546,6 +8548,8 @@ void DatabaseInterface::removeRadio(qulonglong radioId)
     }
 
     d->mDeleteRadioQuery.finish();
+
+    emitTrackerChanges();
 }
 
 void DatabaseInterface::removeAlbumInDatabase(qulonglong albumId)

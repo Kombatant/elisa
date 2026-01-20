@@ -7,6 +7,7 @@
 #include "radioartworkresolver.h"
 
 #include "elisa_settings.h"
+#include "playerLogging.h"
 
 #include <QJsonArray>
 #include <QJsonDocument>

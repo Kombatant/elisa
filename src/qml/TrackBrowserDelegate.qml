@@ -30,6 +30,7 @@ ItemDelegate {
     property int trackNumber
     property int discNumber
     property int rating
+    property int databaseId
     property bool hideDiscNumber
     property bool isSelected
     property bool isAlternateColor
@@ -65,6 +66,12 @@ ItemDelegate {
     ListView.onReused: delegateLoaded = true
 
     property list<Kirigami.Action> actions: [
+        Kirigami.Action {
+            text: i18nc("@action:button", "Delete")
+            icon.name: "edit-delete-remove"
+            onTriggered: ElisaApplication.musicManager.deleteElementById(ElisaUtils.Radio, mediaTrack.databaseId)
+            visible: mediaTrack.dataType === ElisaUtils.Radio && mediaTrack.databaseId !== 0
+        },
         Kirigami.Action {
             text: i18nc("@action:button Show the file for this song in the file manager", "Show in folder")
             icon.name: "document-open-folder"

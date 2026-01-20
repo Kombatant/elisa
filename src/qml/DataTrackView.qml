@@ -84,6 +84,7 @@ AbstractDataView {
         trackNumber: model.trackNumber ? model.trackNumber : -1
         discNumber: model.discNumber ? model.discNumber : -1
         rating: model.rating
+        databaseId: model.databaseId ? model.databaseId : 0
         hideDiscNumber: !listView.displaySingleAlbum && model.isSingleDiscAlbum
         isSelected: contentDirectoryView.currentIndex === index
         isAlternateColor: (index % 2) === 1
