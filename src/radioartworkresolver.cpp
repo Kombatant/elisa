@@ -7,7 +7,6 @@
 #include "radioartworkresolver.h"
 
 #include "elisa_settings.h"
-#include "playerLogging.h"
 
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -47,7 +46,6 @@ void RadioArtworkResolver::requestArtwork(const QPersistentModelIndex &index, co
 
     if (mCache.contains(key)) {
         const auto cached = mCache.value(key);
-        qCInfo(orgKdeElisaPlayer()) << "RadioArtworkResolver::requestArtwork" << "cache hit" << key << cached;
         if (cached.isValid() && !cached.isEmpty()) {
             Q_EMIT artworkResolved(index, cached);
         }
@@ -56,7 +54,6 @@ void RadioArtworkResolver::requestArtwork(const QPersistentModelIndex &index, co
 
     mPending[key].push_back(index);
     if (mInFlight.contains(key)) {
-        qCInfo(orgKdeElisaPlayer()) << "RadioArtworkResolver::requestArtwork" << "request already in flight" << key;
         return;
     }
 
@@ -68,7 +65,6 @@ void RadioArtworkResolver::startDiscogsLookup(const QString &key, const QString 
 {
     const auto token = Elisa::ElisaConfiguration::discogsToken().trimmed();
     if (token.isEmpty()) {
-        qCWarning(orgKdeElisaPlayer()) << "RadioArtworkResolver::startDiscogsLookup" << "missing Discogs token" << key;
         finishKey(key, {});
         return;
     }
@@ -81,10 +77,9 @@ void RadioArtworkResolver::startDiscogsLookup(const QString &key, const QString 
     query.addQueryItem(u"per_page"_s, u"1"_s);
     query.addQueryItem(u"page"_s, u"1"_s);
     url.setQuery(query.toString(QUrl::FullyEncoded));
+    const auto encodedUrl = QUrl::fromEncoded(url.toEncoded());
 
-    qCInfo(orgKdeElisaPlayer()) << "RadioArtworkResolver::startDiscogsLookup" << "request" << key << url;
-
-    auto request = buildRequest(url);
+    auto request = buildRequest(encodedUrl);
     request.setRawHeader("Authorization", QByteArray("Discogs token=") + token.toUtf8());
     request.setRawHeader("Accept", "application/json");
 
@@ -95,7 +90,6 @@ void RadioArtworkResolver::startDiscogsLookup(const QString &key, const QString 
         const auto key = mReplyKey.take(reply);
 
         if (reply->error() != QNetworkReply::NoError) {
-            qCWarning(orgKdeElisaPlayer()) << "RadioArtworkResolver::startDiscogsLookup" << "reply error" << key << reply->error() << reply->errorString();
             reply->deleteLater();
             finishKey(key, {});
             return;
@@ -106,14 +100,12 @@ void RadioArtworkResolver::startDiscogsLookup(const QString &key, const QString 
 
         const auto document = QJsonDocument::fromJson(payload);
         if (!document.isObject()) {
-            qCWarning(orgKdeElisaPlayer()) << "RadioArtworkResolver::startDiscogsLookup" << "invalid JSON" << key;
             finishKey(key, {});
             return;
         }
 
         const auto results = document.object().value(u"results"_s).toArray();
         if (results.isEmpty()) {
-            qCInfo(orgKdeElisaPlayer()) << "RadioArtworkResolver::startDiscogsLookup" << "no results" << key;
             finishKey(key, {});
             return;
         }
@@ -123,8 +115,6 @@ void RadioArtworkResolver::startDiscogsLookup(const QString &key, const QString 
         if (coverUrl.isEmpty()) {
             coverUrl = resultObject.value(u"thumb"_s).toString();
         }
-
-        qCInfo(orgKdeElisaPlayer()) << "RadioArtworkResolver::startDiscogsLookup" << "resolved cover" << key << coverUrl;
 
         finishKey(key, QUrl(coverUrl));
     });
